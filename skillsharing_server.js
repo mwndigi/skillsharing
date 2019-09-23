@@ -5,6 +5,10 @@ var ecstatic = require("ecstatic");
 var router = new Router();
 var defaultHeaders = {"Content-Type": "text/plain"};
 
+const {readFileSync, writeFile} = require("fs");
+
+const fileName = "./talks.json";
+
 var SkillShareServer = class SkillShareServer {
   constructor(talks) {
     this.talks = talks;
@@ -63,6 +67,16 @@ function readStream(stream) {
     stream.on("data", chunk => data += chunk.toString());
     stream.on("end", () => resolve(data));
   });
+}
+
+function loadTalks() {
+  let json;
+  try {
+    json = JSON.parse(readFileSync(fileName, "utf8"));
+  } catch (e) {
+    json = {};
+  }
+  return Object.assign(Object.create(null), json);
 }
 
 router.add("PUT", talkPath,
@@ -145,6 +159,10 @@ SkillShareServer.prototype.updated = function() {
   let response = this.talkResponse();
   this.waiting.forEach(resolve => resolve(response));
   this.waiting = [];
+
+  writeFile(fileName, JSON.stringify(this.talks), e => {
+    if (e) throw e;
+  });
 };
 
 new SkillShareServer(Object.create(null)).start(8000);
